@@ -47,7 +47,7 @@ Sau khi đoạn text được tách và cho ra output là các tokens, các toke
 
 Sau khi các token đã đi qua 0 hoặc nhiều token filters chúng đã được gửi tới Lucene để được lập đánh index. Một analyzer sẽ bao gồm không hoặc nhiều character filters, một tokenizer, và không hoặc nhiều token filters
 
-*Cấu trúc của một Analyzer*
+*Tạo một index*
 
 ```json
 curl -X PUT "localhost:9200/my_index?pretty" -H 'Content-Type: application/json' -d'
@@ -61,6 +61,8 @@ curl -X PUT "localhost:9200/my_index?pretty" -H 'Content-Type: application/json'
 }
 '
 ```
+
+*Cấu trúc của một Analyzer*
 
 ```json
 curl -X PUT "localhost:9200/my_index?pretty" -H 'Content-Type: application/json' -d'
@@ -152,3 +154,28 @@ curl -X POST "localhost:9200/my_index/_analyze?pretty" -H 'Content-Type: applica
 }
 '
 ```
+
+List tất cả các analyzer trong index
+```json
+curl -X GET "localhost:9200/my_index/_settings?pretty"
+```
+
+Update analyzer cho một index có sẵn
+```json
+curl -X POST "localhost:9200/my_index/_close?pretty"
+curl -X PUT "localhost:9200/my_index/_settings?pretty" -H 'Content-Type: application/json' -d'
+{
+  "analysis" : {
+    "analyzer":{
+      "aaaa":{
+        "type":"custom",
+        "tokenizer":"whitespace"
+      }
+    }
+  }
+}
+'
+curl -X POST "localhost:9200/my_index/_open?pretty"
+```
+
+### 2.5 Custom một char filter
