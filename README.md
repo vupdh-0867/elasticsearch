@@ -6,7 +6,7 @@
 
 - ES hoạt động độc lập như một server và giao tiếp thông qua giao thức resful
 
-- ES là một hệ phân tán *
+- ES là một hệ phân tán \*
 
 2 Các khái niệm cơ bản
 
@@ -47,7 +47,7 @@ Sau khi đoạn text được tách và cho ra output là các tokens, các toke
 
 Sau khi các token đã đi qua 0 hoặc nhiều token filters chúng đã được gửi tới Lucene để được lập đánh index. Một analyzer sẽ bao gồm không hoặc nhiều character filters, một tokenizer, và không hoặc nhiều token filters
 
-*Tạo một index*
+_Tạo một index_
 
 ```json
 curl -X PUT "localhost:9200/my_index?pretty" -H 'Content-Type: application/json' -d'
@@ -62,7 +62,7 @@ curl -X PUT "localhost:9200/my_index?pretty" -H 'Content-Type: application/json'
 '
 ```
 
-*Cấu trúc của một Analyzer*
+_Cấu trúc của một Analyzer_
 
 ```json
 curl -X PUT "localhost:9200/my_index?pretty" -H 'Content-Type: application/json' -d'
@@ -91,6 +91,9 @@ curl -X PUT "localhost:9200/my_index?pretty" -H 'Content-Type: application/json'
         }
       }
     }
+  },
+  "mappings" : {
+    ...
   }
 }
 '
@@ -102,7 +105,7 @@ curl -X POST "localhost:9200/my_index/_analyze?pretty" -H 'Content-Type: applica
 '
 ```
 
-*Custom các charfilter, tokenizer, token filter*
+_Custom các charfilter, tokenizer, token filter_
 
 ```json
 curl -X PUT "localhost:9200/my_index?pretty" -H 'Content-Type: application/json' -d'
@@ -156,11 +159,13 @@ curl -X POST "localhost:9200/my_index/_analyze?pretty" -H 'Content-Type: applica
 ```
 
 List tất cả các analyzer trong index
+
 ```json
 curl -X GET "localhost:9200/my_index/_settings?pretty"
 ```
 
 Update analyzer cho một index có sẵn
+
 ```json
 curl -X POST "localhost:9200/my_index/_close?pretty"
 curl -X PUT "localhost:9200/my_index/_settings?pretty" -H 'Content-Type: application/json' -d'
@@ -178,4 +183,130 @@ curl -X PUT "localhost:9200/my_index/_settings?pretty" -H 'Content-Type: applica
 curl -X POST "localhost:9200/my_index/_open?pretty"
 ```
 
-### 2.5 Custom một char filter
+```json
+curl -XPOST 'localhost:9200/my_index' -d '
+{
+  "mappings" : {
+    "document" : {
+      "properties" : {
+        "field_name" : {
+          "type" : "string",
+          "analyzer" : "myCustomAnalyzer"
+        }
+      }
+    }
+  }
+}
+'
+```
+
+có 2 cách để thiết lập analyzer cho index, set global analyzer trong file elasticsearch.yml, set analyzer khi tạo một index (vd o tren có thể update analyzer)
+
+### 2.5 Build in analyzer
+
+#### 2.5.1 Standard
+
+Đây là analyzer mặc định, sử dụng standard, lowercase, và stop token-filter, sẽ đề cập ở phần sau
+
+#### 2.5.2 Simple
+
+Simple analyzer tách đoạn text thành token khi gặp một ký tự không phải là letter. Nó bao gồm lowercase tokenizer
+
+```
+POST _analyze
+{
+  "analyzer": "simple",
+  "text": "The 2 QUICK Brown-Foxes jumped over the lazy dog's bone."
+}
+```
+
+kết quả:
+[ the, quick, brown, foxes, jumped, over, the, lazy, dog, s, bone ]
+
+#### 2.5.3 Whitespace
+
+Tách đoạn text thành token dựa vào các whitespace. Nó bao gồm whitespace tokenizer
+
+```
+POST _analyze
+{
+  "analyzer": "whitespace",
+  "text": "The 2 QUICK Brown-Foxes jumped over the lazy dog's bone."
+}
+```
+
+Kết quả:
+[ The, 2, QUICK, Brown-Foxes, jumped, over, the, lazy, dog's, bone. ]
+
+#### 2.5.4 Stop
+
+Giống với Simple analyzer, tách đoạn text thành token khi gặp một ký tự không phải là letter nhưng có thêm một tính năng là loại bỏ các token là stopword(a, an, the, sẽ đề cập ở phần sau) nhờ có thêm một token filter là Stop Token Filter
+
+```
+POST my_index/_analyze
+{
+  "analyzer": "my_stop_analyzer",
+  "text": "The 2 QUICK Brown-Foxes jumped over the lazy dog's bone."
+}
+```
+
+[ quick, brown, foxes, jumped, lazy, dog, s, bone ]
+
+#### 2.5.5 Keyword
+
+Lấy tất cả đoạn text thành một token. Khuyến khích set field thành not_analyzed thay vì dùng analyzer keyword
+
+```json
+curl -XPOST 'localhost:9200/my_index
+{
+  "mappings" : {
+    "document" : {
+      "properties" : {
+        "field_name" : {
+          "type" : "string",
+          "analyzer" : "keyword"
+        }
+      }
+    }
+  }
+}
+'
+```
+
+Khuyến khích
+
+```json
+curl -XPOST 'localhost:9200/my_index
+{
+  "mappings" : {
+    "document" : {
+      "properties" : {
+        "field_name" : {
+          "type" : "string",
+          "index": "not_analyzed"
+        }
+      }
+    }
+  }
+}
+'
+```
+
+#### 2.5.5 Pattern
+
+Tách đoạn text thành token dựa vào biểu thức chính quy (RegEx), pattern mặc định là \W+: ngoại trừ tất cả non-word characters
+
+POST \_analyze
+{
+"analyzer": "pattern",
+"text": "The 2 QUICK Brown-Foxes jumped over the lazy dog's bone."
+}
+
+kết quả:
+[ the, 2, quick, brown, foxes, jumped, over, the, lazy, dog, s, bone ]
+
+#### 2.5.6 Language analyzer
+
+Tập hợp các analyzer dành cho các ngôn ngữ khác nhau (arabic, armenian, basque, bengali, brazilian, bulgarian, catalan, cjk, czech, danish, dutch, english, finnish, french, galician, german, greek, hindi, hungarian, indonesian, irish, italian, latvian, lithuanian, norwegian, persian, portuguese, romanian, russian, sorani, spanish, swedish, turkish, thai). 
+
+# cấu hình cho các analyzer
